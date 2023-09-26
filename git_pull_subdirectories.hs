@@ -46,11 +46,11 @@ parseArguments arguments
       unless success exitFailure
 
 usageMessage :: String
-usageMessage = "Usage: git_pull_projects [-hv] DIRECTORY...\n \
+usageMessage = "Usage: git_pull_subdirectories [-hv] DIRECTORY...\n \
                \\n\
                \Runs git pull on the subdirectories in the supplied directories."
 versionMessage :: String
-versionMessage = "git_pull_projects v0.2.0"
+versionMessage = "git_pull_subdirectories v0.2.1"
 
 
 
