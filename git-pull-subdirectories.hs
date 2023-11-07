@@ -1,14 +1,5 @@
 #!/usr/bin/env runhaskell
 
-import System.Process
-import System.Directory
-import System.Environment
-import System.Exit
-import System.IO
-import Control.Monad
-
-
-
 {- MIT License
 
   Copyright (c) 2023 ona-li-toki-e-jan-Epiphany-tawa-mi
@@ -31,6 +22,17 @@ import Control.Monad
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE. -}
 
+import System.Process
+import System.Directory
+import System.FilePath
+import System.Environment
+import System.Exit
+import System.IO
+import Control.Monad
+import Data.Functor
+
+
+
 -- |Runs git pull on the subdirectories in the directories supplied via command
 -- line arguments.
 main :: IO ()
@@ -42,15 +44,15 @@ parseArguments arguments
   | "-h" `elem` arguments = putStrLn usageMessage
   | "-v" `elem` arguments = putStrLn versionMessage
   | otherwise             = do
-      success <- mapM gitPullSubdirectories arguments >>= return . and
+      success <- mapM gitPullSubdirectories arguments <&> and
       unless success exitFailure
 
 usageMessage :: String
-usageMessage = "Usage: git_pull_subdirectories [-hv] DIRECTORY...\n \
+usageMessage = "Usage: git-pull-subdirectories [-hv] DIRECTORY...\n \
                \\n\
                \Runs git pull on the subdirectories in the supplied directories."
 versionMessage :: String
-versionMessage = "git_pull_subdirectories v0.2.1"
+versionMessage = "git-pull-subdirectories v0.2.1"
 
 
 
@@ -64,10 +66,10 @@ gitPullSubdirectories directory = do
 
   if exists
     then do
-      success <- listDirectory directory
+      success <- listDirectory directory <&> map (combine directory)
              >>= filterM doesDirectoryExist
              >>= mapM gitPullDirectoryUnsafe
-             >>= return . and
+             <&> and
       unless success $ stderrPutStrLn $ "Failed running git pull on subdirectories of '" ++ show fullDirectory ++ "': git pull command failed! See previous log messages for details"
       return success
 
@@ -83,10 +85,7 @@ gitPullDirectoryUnsafe directory = do
   fullDirectory <- makeAbsolute directory
   putStrLn $ "Running git pull on '" ++ show fullDirectory ++ "'..."
 
-  currentDirectory <- getCurrentDirectory
-  setCurrentDirectory directory
-  exitCode <- spawnCommand "git pull" >>= waitForProcess
-  setCurrentDirectory currentDirectory
+  exitCode <- spawnCommand ("git -C '" ++ directory ++ "' pull") >>= waitForProcess
 
   case exitCode of
     ExitSuccess             -> return True
