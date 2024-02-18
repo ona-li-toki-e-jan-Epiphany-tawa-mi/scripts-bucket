@@ -25,9 +25,9 @@ in
           description = "Whether to automatically run git pull on the repository every week.";
           type        = bool;
         };
-        url = mkOption {
-          description = "The URL of the repository to clone.";
-          type        = str;
+        remotes = mkOption {
+          description = "A mapping between the names and URLs of the remotes to add. The remote name 'origin' to clone the repository.";
+          type        = attrsOf str;
         };
         target = mkOption {
           description = "The folder path to copy the repository files into.";
@@ -51,12 +51,21 @@ in
       home.activation =
         # Converts a repository defined in options to a bit of shell script that
         # will clone it to the desired location.
-        mapAttrs' (name: {target, url, ...}:
+        mapAttrs' (name: {target, remotes, ...}:
           {
             name  = "git.clonedRepositories-${name}";
             value = hm.dag.entryAfter ["installPackages"] ''
               if [ ! -d "${target}" ]; then
-                ${pathCommandPrefix} $DRY_RUN_CMD git clone "${url}" "${target}"
+                ${pathCommandPrefix} $DRY_RUN_CMD git clone "${remotes."origin"}" "${target}"
+
+                # Adds remotes for the other URLs.
+                ${foldl (a: b: a + b) "" (mapAttrsToList (name: url:
+                  if name != "origin"
+                  then ''
+                    ${pathCommandPrefix} $DRY_RUN_CMD git -C "${target}" remote add "${name}" "${url}"
+                  ''
+                  else ""
+                ) remotes)}
               fi
             '';
           }
