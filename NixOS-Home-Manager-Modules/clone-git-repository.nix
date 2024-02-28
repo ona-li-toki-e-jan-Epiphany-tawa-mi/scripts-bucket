@@ -59,7 +59,7 @@ in
                 ${pathCommandPrefix} $DRY_RUN_CMD git clone "${remotes."origin"}" "${target}"
 
                 # Adds remotes for the other URLs.
-                ${foldl (a: b: a + b) "" (mapAttrsToList (name: url:
+                ${lib.concatStrings (mapAttrsToList (name: url:
                   if name != "origin"
                   then ''
                     ${pathCommandPrefix} $DRY_RUN_CMD git -C "${target}" remote add "${name}" "${url}"
