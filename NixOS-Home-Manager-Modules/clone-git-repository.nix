@@ -82,27 +82,30 @@ in
         in mkIf existsAutoPuller {
           # User service to run git pull.
           services."${serviceName}" = {
-            Unit = {
-              Description = serviceDescription;
-              After       = [ "network-online.target" ];
+            "Unit" = {
+              "Description" = serviceDescription;
+              "After"       = [ "network-online.target" ];
             };
 
-            # Generates a script to run git pull on the relavent repositories.
-            Service.ExecStart = pkgs.writeShellScript "auto-pull-repositories.sh" (
-              foldlAttrs (accumulator: name: {target, ...}: accumulator + ''
-                ${pathCommandPrefix} $DRY_RUN_CMD git -C "${target}" pull
-              '') "" (filterAttrs (name: {enable, autoPull, ...}: enable && autoPull) cfg.clonedRepositories)
-            );
+            "Service" = {
+              "Type" = "oneshot";
+              # Generates a script to run git pull on the relavent repositories.
+              "ExecStart" = pkgs.writeShellScript "auto-pull-repositories.sh" (
+                foldlAttrs (accumulator: name: {target, ...}: accumulator + ''
+                  ${pathCommandPrefix} $DRY_RUN_CMD git -C "${target}" pull
+                '') "" (filterAttrs (name: {enable, autoPull, ...}: enable && autoPull) cfg.clonedRepositories)
+              );
+            };
           };
 
           # Runs the autoPullRepositories service once a week.
           timers."${serviceName}" = {
-            Unit.Description = serviceDescription;
-            Timer            = {
-              OnCalendar = "weekly";
-              Persistent = true;
+            "Unit"."Description" = serviceDescription;
+            "Timer"              = {
+              "OnCalendar" = "weekly";
+              "Persistent" = true;
             };
-            Install.WantedBy = [ "timers.target" ];
+            "Install"."WantedBy" = [ "timers.target" ];
           };
         };
     };
