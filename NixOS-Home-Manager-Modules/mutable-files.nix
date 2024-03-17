@@ -23,7 +23,7 @@
 # A library module that allows writing out configuration files even when
 # programs choose to overwrite those files and destroy the symlinks.
 
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 
 with lib;
 
@@ -75,16 +75,15 @@ in
 
 
 
-  # Note: I would use lib.trivial.pipe here but it seems to be borked? It kept
-  # returning a function.
   config.home.activation =
     let # Checks to see if there is at least one file that is enabled.
         existsEnabledFile = foldlAttrs (accumulator: name: {enable, ...}: accumulator || enable) false cfg.file;
     in mkIf existsEnabledFile (
       # Generates scripts to overwrite the target files.
       concatMapAttrs (name: value:
-        let target = if value.target != null then value.target else name;
-            text   = if value.text != null then value.text else readFromFile value.source;
+        let target   = if value.target != null then value.target else name;
+            text     = if value.text != null then value.text else readFromFile value.source;
+            fileName = last (path.subpath.components name);
         in {
           # The deleter script is used to delete the original files before the
           # "symlink" is generated.
@@ -96,9 +95,7 @@ in
           # "symlink."
           "mutable.files-${name}-linker" = hm.dag.entryAfter ["linkGeneration"] ''
             $DRY_RUN_CMD mkdir  --parents "$(dirname ${target})"
-            $DRY_RUN_CMD cat > "${target}" << EOF
-            ${text}
-            EOF
+            $DRY_RUN_CMD cp "${pkgs.writeText fileName text}" "${target}"
           '';
         }
       # Filters out disabled files.
